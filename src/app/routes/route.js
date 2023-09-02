@@ -4,9 +4,24 @@ const router = express.Router();
 
 const { createDownloadableLink } = require('../helpers/helper')
 
+const { init } = require('../../app/controller/artlist')
+
 router.get('/links', (req, res) => {
     res.send('Hello World!');
     console.log(`1111 *Res sent`);
+});
+
+router.post('/links', async (req, res) => {
+    const link = req.body.link;
+    console.log(`Link ne`, link);
+    if(!link) {
+        return res.status(400).send('Link is not correct.');
+    } else {
+        await init(link);
+        res.send('Success convert')
+    }
+
+
 });
 
 router.get('/download', (req, res) => {

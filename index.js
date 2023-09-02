@@ -24,12 +24,4 @@ const server = app.listen(PORT, async () => {
     'mongodb+srv://admin:12345678%40X@crawler.ifxttpz.mongodb.net/?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log("MongoDB connected successfully"))
     .catch(err => console.log('MongoDB connection error:', err));
-  await init();
-
-
 });
-
-// server.close();
-
-
-
