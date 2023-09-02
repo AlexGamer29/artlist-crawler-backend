@@ -2,7 +2,6 @@ const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
-const redis = require('redis');
 
 const Links = require('../model/Links');
 
@@ -90,29 +89,4 @@ function createDownloadableLink(fileName) {
     return filePath;
 }
 
-
-// Function to broadcast an event
-async function broadcastEvent(eventName, eventMessage) {
-    const publisher = await redis.createClient();
-    await publisher.connect();
-
-    const eventData = JSON.stringify({ eventName, eventMessage });
-    publisher.publish('events', eventData);
-}
-
-// Function to subscribe to events
-async function subscribeToEvents(callback) {
-    const subscriber = await redis.createClient();
-    await subscriber.connect();
-
-    subscriber.subscribe('events');
-
-    subscriber.on('message', (channel, message) => {
-        if (channel === 'events') {
-            const eventData = JSON.parse(message);
-            callback(eventData.eventName, eventData.eventMessage);
-        }
-    });
-}
-
-module.exports = { downloadAacFile, convertAacToWav, getTextOfElement, createDownloadableLink, broadcastEvent, subscribeToEvents };
+module.exports = { downloadAacFile, convertAacToWav, getTextOfElement, createDownloadableLink };
