@@ -15,7 +15,7 @@ async function init(link) {
 
     try {
         // Go to the provided link
-        await page.goto(link, { waitUntil: 'networkidle2' });
+        await page.goto(link, { waitUntil: 'networkidle2', timeout: 100000 });
 
         // Wait for the element to be visible and clickable
         const playButton = await page.waitForSelector('.svg-inline--fa.fa-play.fa-1x.cursor-pointer.text-white', { visible: true, timeout: 0 });
