@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const path = require('path');
 const router = express.Router();
 
@@ -26,27 +27,35 @@ router.post('/links', cacheData, async (req, res) => {
         return res.status(400).json({ error: 'Link is not correct.' });
     } else {
         object = await init(link);
-        redisClient.setex(link, 3000, JSON.stringify(object));
-        res.json({ status: 'Success convert' })
+        if (object.status === 'failed') {
+            res.json(object);
+        } else if (object.status === 'success') {
+            redisClient.setex(link, 3000, JSON.stringify(object));
+            res.json(object);
+        }
     }
 });
 
 router.get('/download', (req, res) => {
-    const filename = req.query.filename; // Get the filename from query parameter
-    if (!filename) {
-        return res.status(400).send('Filename query parameter is missing.');
+    const fileName = req.query.filename;
+
+    if (!fileName) {
+        return res.status(400).send({ error: 'Please provide a valid filename in the query parameters.' });
     }
 
-    const filePath = createDownloadableLink(filename);
-    console.log('Filename:', filename);
+    const filePath = createDownloadableLink(fileName);
 
-    res.download(filePath, (err) => {
-        if (err) {
-            // Handle the error by sending an error response
-            console.error('Error downloading file:', err);
-            return res.status(500).send('Error downloading file: ' + err.message);
-        }
-    });
+    // Check if the file exists
+    if (fs.existsSync(filePath)) {
+        // Set the Content-Disposition header to suggest the filename when downloading
+        res.setHeader('Content-Disposition', `attachment; filename=${fileName}`);
+
+        // Stream the file to the response
+        const fileStream = fs.createReadStream(filePath);
+        fileStream.pipe(res);
+    } else {
+        res.status(404).json({ error: 'File not found' });
+    }
 });
 
 // Serve files from the 'exports' directory
