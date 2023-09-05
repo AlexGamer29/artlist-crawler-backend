@@ -3,6 +3,8 @@ const bodyParser = require('body-parser');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
+require('dotenv').config();
+
 const app = express();
 const PORT = 3027;
 
@@ -16,7 +18,7 @@ app.use('/api', routes);
 const server = app.listen(PORT, async () => {
   console.log(`Server started on port ${PORT}`);
 
-  await mongoose.connect('mongodb+srv://admin:12345678%40X@crawler.ifxttpz.mongodb.net/?retryWrites=true&w=majority', { useNewUrlParser: true, useUnifiedTopology: true })
+  await mongoose.connect(process.env.MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true })
     .then(() => console.log('MongoDB connected successfully'))
     .catch((err) => console.log('MongoDB connection error:', err));
 });

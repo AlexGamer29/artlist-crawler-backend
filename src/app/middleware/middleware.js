@@ -1,10 +1,11 @@
+require('dotenv').config();
 const Redis = require("ioredis");
 
 let redisClient;
 
 function createRedisClient() {
   if (!redisClient) {
-    redisClient = new Redis();
+    redisClient = new Redis(process.env.REDIS_URL);
 
     // Handle Redis errors
     redisClient.on("error", (err) => {
