@@ -2,26 +2,33 @@ const express = require('express');
 const path = require('path');
 const router = express.Router();
 
-const { createDownloadableLink } = require('../helpers/helper')
+const { createDownloadableLink } = require('../helpers/helper');
+const { init } = require('../../app/controller/artlist');
+const { cacheData, redisClient } = require('../../app/middleware/middleware')
 
-const { init } = require('../../app/controller/artlist')
-
-router.get('/links', (req, res) => {
-    res.send('Hello World!');
-    console.log(`1111 *Res sent`);
+router.get('/', (req, res) => {
+    res.json({
+        data: 'Hello World!'
+    });
 });
 
-router.post('/links', async (req, res) => {
+router.get('/links', (req, res) => {
+    res.json({
+        data: 'Get links ne'
+    });
+});
+
+router.post('/links', cacheData, async (req, res) => {
     const link = req.body.link;
     console.log(`Link ne`, link);
-    if(!link) {
-        return res.status(400).send('Link is not correct.');
+    let object;
+    if (!link) {
+        return res.status(400).json({ error: 'Link is not correct.' });
     } else {
-        await init(link);
-        res.send('Success convert')
+        object = await init(link);
+        redisClient.setex(link, 3000, JSON.stringify(object));
+        res.json({ status: 'Success convert' })
     }
-
-
 });
 
 router.get('/download', (req, res) => {
