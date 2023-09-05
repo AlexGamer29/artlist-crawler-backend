@@ -1,52 +1,50 @@
 const puppeteer = require('puppeteer');
-const { downloadAacFile, getTextOfElement } = require('../helpers/helper')
+const { downloadAacFile, getTextOfElement } = require('../helpers/helper');
 
 async function init(link) {
-    // Launch a headless browser
-    const browser = await puppeteer.launch({
-        headless: true,
-        args: ['--no-sandbox'],
-    });
+  // Launch a headless browser
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox'],
+  });
 
-    const TIMEOUT_SHORT = 1000;
-    const mediaFiles = [];
-    const page = await browser.newPage();
-    await page.setCacheEnabled(false);
+  const mediaFiles = [];
+  const page = await browser.newPage();
+  await page.setCacheEnabled(false);
 
-    try {
-        // Go to the provided link
-        await page.goto(link, { waitUntil: 'networkidle2', timeout: 100000 });
+  let files;
 
-        // Wait for the element to be visible and clickable
-        const playButton = await page.waitForSelector('.svg-inline--fa.fa-play.fa-1x.cursor-pointer.text-white', { visible: true, timeout: 0 });
+  try {
+    // Go to the provided link
+    await page.goto(link, { waitUntil: 'networkidle2', timeout: 100000 });
 
-        // Click the element
-        await playButton.click();
+    // Wait for the element to be visible and clickable
+    const playButton = await page.waitForSelector('.svg-inline--fa.fa-play.fa-1x.cursor-pointer.text-white', { visible: true, timeout: 0 });
 
+    // Click the element
+    await playButton.click();
 
-        console.log('Element clicked successfully');
+    console.log('Element clicked successfully');
 
-        const audioSrc = await page.evaluateHandle(() => {
-            return Array.from(document.getElementsByTagName('audio')).map(ele => ele.src);
-        });
+    const audioSrc = await page.evaluateHandle(() => Array.from(document.getElementsByTagName('audio')).map((ele) => ele.src));
 
-        mediaFiles.push(await audioSrc.jsonValue());
+    mediaFiles.push(await audioSrc.jsonValue());
 
-        // Wait for some time or perform interactions on the page that trigger network requests
-        console.log('Media Files:', mediaFiles);
+    // Wait for some time or perform interactions on the page that trigger network requests
+    console.log('Media Files:', mediaFiles);
 
-        let song = await getTextOfElement(page, `.m-0.text-3xl`);
-        let artist = await getTextOfElement(page, `.inline-block.text-accent`);
+    const song = await getTextOfElement(page, '.m-0.text-3xl');
+    const artist = await getTextOfElement(page, '.inline-block.text-accent');
 
-        // Example usage
-        console.log(`URL`, mediaFiles[0])
-        await downloadAacFile(mediaFiles[0], song, artist);
-
-        await browser.close();
-    } catch (error) {
-        console.error('Error clicking the element:', error);
-        await browser.close();
-    }
+    // Example usage
+    console.log('URL', mediaFiles[0]);
+    files = await downloadAacFile(mediaFiles[0], song, artist);
+    await browser.close();
+  } catch (error) {
+    console.error('Error clicking the element:', error);
+    await browser.close();
+  }
+  return files;
 }
 
-module.exports = { init }
+module.exports = { init };
