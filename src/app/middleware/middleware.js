@@ -11,6 +11,10 @@ function createRedisClient() {
     redisClient.on("error", (err) => {
       console.error("Redis Error:", err);
     });
+
+    redisClient.on("connect", () => {
+      console.log('Connect redis success !')
+     })
   }
   return redisClient;
 }
