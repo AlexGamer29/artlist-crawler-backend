@@ -6,7 +6,7 @@ const router = express.Router();
 const { createDownloadableLink } = require('../helpers/helper');
 const { init } = require('../../app/controller/artlist');
 const { cacheData, redisClient } = require('../../app/middleware/middleware');
-require('../model/Links');
+const Links = require('../model/Links');
 
 router.get('/', (req, res) => {
     res.json({
@@ -14,10 +14,11 @@ router.get('/', (req, res) => {
     });
 });
 
-router.get('/links', (req, res) => {
+router.get('/links', async (req, res) => {
+    const allLinks = await Links.find();
     res.json({
-        data: 'Get links ne'
-    });
+        data: allLinks
+    })
 });
 
 router.post('/links', cacheData, async (req, res) => {
@@ -29,7 +30,10 @@ router.post('/links', cacheData, async (req, res) => {
     } else {
         object = await init(link);
         if (!object || object.status === 'failed') {
-            res.json(object);
+            res.json({
+                status: 'failed',
+                data: object ? object : []
+            });
         } else if (object.status === 'success') {
             redisClient.setex(link, 3000, JSON.stringify(object));
             res.json(object);
