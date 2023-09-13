@@ -5,7 +5,8 @@ const router = express.Router();
 
 const { createDownloadableLink } = require('../helpers/helper');
 const { init } = require('../../app/controller/artlist');
-const { cacheData, redisClient } = require('../../app/middleware/middleware')
+const { cacheData, redisClient } = require('../../app/middleware/middleware');
+require('../model/Links');
 
 router.get('/', (req, res) => {
     res.json({
@@ -27,7 +28,7 @@ router.post('/links', cacheData, async (req, res) => {
         return res.status(400).json({ error: 'Link is not correct.' });
     } else {
         object = await init(link);
-        if (object.status === 'failed') {
+        if (!object || object.status === 'failed') {
             res.json(object);
         } else if (object.status === 'success') {
             redisClient.setex(link, 3000, JSON.stringify(object));
