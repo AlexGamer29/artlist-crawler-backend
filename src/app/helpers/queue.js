@@ -1,24 +1,50 @@
-const kue = require('kue');
+const Queue = require("bull");
 
-let queue;
+const { redisClient } = require("../middleware/middleware");
+const { init } = require("../../app/controller/artlist");
 
-function initQueue() {
-    if (!queue) {
-        queue = kue.createQueue({ redis: process.env.REDIS_URL }); // Create a Kue queue instance
+// Create a new Bull queue for processing init jobs
+const initQueue = new Queue("initQueue", process.env.REDIS_URL, {
+  redis: {
+    port: process.env.REDIS_PORT,
+    host: process.env.REDIS_HOST,
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
+  },
+});
 
-        // console.log(`QUEUE NE`, queue);
+// Define the job processing function
+initQueue.process(async (job) => {
+  const link = job.data.link;
+  console.log(`Processing link:`, link);
 
-        queue.on('error', function (err) {
-            console.log('Oops... ', err);
-        });
+  try {
+    // Call the init function to process the link
+    const object = await init(link);
 
-        queue.on('failed', (job, err) => {
-            console.error(`Job ${job.id} failed: ${err}`);
-        });
+    if (!object || object.status === "failed") {
+      throw new Error("Fail to get file. Try again.");
+    } else {
+      // Save the result in Redis or perform any other necessary actions
+      redisClient.setex(link, 60, JSON.stringify(object));
+      return object;
     }
-    return queue;
-}
+  } catch (error) {
+    console.error(error);
+    throw error; // Rethrow the error to handle it in the catch block of the route
+  }
+});
 
-queue = initQueue();
+initQueue.on('progress', function (job, progress) {
+  console.log(`[${job.id}] ${job.data.link} is ${progress * 100}% ready!`);
+});
 
-module.exports = { initQueue, queue };
+initQueue.on("error", (job, error) => {
+  console.log(`*** ERROR QUEUE [${job.id}] ${job.data.link}`, error);
+});
+
+initQueue.on('completed', job => {
+  console.log(`[${job.id}] ${job.data.link} COMPLETE JOB`);
+})
+
+module.exports = { initQueue };
