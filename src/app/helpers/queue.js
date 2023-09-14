@@ -2,6 +2,7 @@ const Queue = require("bull");
 
 const { redisClient } = require("../middleware/middleware");
 const { init } = require("../../app/controller/artlist");
+const CONCURRENCY = 1;
 
 // Create a new Bull queue for processing init jobs
 const initQueue = new Queue("initQueue", process.env.REDIS_URL, {
@@ -14,7 +15,7 @@ const initQueue = new Queue("initQueue", process.env.REDIS_URL, {
 });
 
 // Define the job processing function
-initQueue.process(async (job) => {
+initQueue.process(CONCURRENCY, async (job) => {
   const link = job.data.link;
   console.log(`Processing link:`, link);
 
