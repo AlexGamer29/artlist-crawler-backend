@@ -39,8 +39,8 @@ initQueue.on('progress', function (job, progress) {
   console.log(`[${job.id}] ${job.data.link} is ${progress * 100}% ready!`);
 });
 
-initQueue.on("error", (job, error) => {
-  console.log(`*** ERROR QUEUE [${job.id}] ${job.data.link}`, error);
+initQueue.on("error", (error) => {
+  console.log(`*** ERROR QUEUE`, error);
 });
 
 initQueue.on('completed', job => {
