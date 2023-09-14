@@ -6,7 +6,7 @@ const router = express.Router();
 const { createDownloadableLink } = require("../helpers/helper");
 const { cacheData } = require("../../app/middleware/middleware");
 const Links = require("../model/Links");
-const { initQueue } = require('../helpers/queue');
+const { initQueue } = require("../helpers/queue");
 
 router.get("/", async (req, res) => {
   res.json({
@@ -32,7 +32,10 @@ router.post("/links", cacheData, async (req, res) => {
 
   try {
     // Add the job to the queue
-    const job = await initQueue.add({ link }, { delay: 5000 });
+    const job = await initQueue.add(
+      { link },
+      { delay: 5000, attempts: 5, removeOnComplete: true }
+    );
 
     // Wait for the job to complete and get the result
     const result = await job.finished(); // This waits until the job is finished
@@ -48,11 +51,9 @@ router.get("/download", (req, res) => {
   const fileName = req.query.filename;
 
   if (!fileName) {
-    return res
-      .status(400)
-      .send({
-        error: "Please provide a valid filename in the query parameters.",
-      });
+    return res.status(400).send({
+      error: "Please provide a valid filename in the query parameters.",
+    });
   }
 
   const filePath = createDownloadableLink(fileName);
