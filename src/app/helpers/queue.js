@@ -48,4 +48,19 @@ initQueue.on('completed', job => {
   console.log(`[${job.id}] ${job.data.link} COMPLETE JOB`);
 })
 
-module.exports = { initQueue };
+async function getAllJobsInfo() {
+  const jobs = await initQueue.getJobs(['waiting', 'active', 'completed', 'failed', 'delayed']);
+
+  const jobInfo = jobs.map((job) => ({
+    id: job.id,
+    name: job.name,
+    data: job.data,
+    state: job.state,
+    progress: job._progress,
+    created_at: new Date(job.timestamp).toLocaleString(),
+  }));
+
+  return jobInfo;
+}
+
+module.exports = { initQueue, getAllJobsInfo };

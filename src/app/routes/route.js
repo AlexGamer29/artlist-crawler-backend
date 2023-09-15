@@ -6,12 +6,22 @@ const router = express.Router();
 const { createDownloadableLink } = require("../helpers/helper");
 const { cacheData } = require("../../app/middleware/middleware");
 const Links = require("../model/Links");
-const { initQueue } = require("../helpers/queue");
+const { initQueue, getAllJobsInfo } = require("../helpers/queue");
+
+// Import Socket.IO
+const io = require("socket.io")();
 
 router.get("/", async (req, res) => {
-  res.json({
-    data: "Hello World!",
-  });
+  try {
+    const jobInfo = await getAllJobsInfo();
+    res.json(jobInfo);
+
+    // Emit a Socket.IO event when new data is available
+    io.emit("newJob", jobInfo); // Replace 'jobInfo' with the actual data
+  } catch (error) {
+    console.error("Error getting job info:", error);
+    res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 router.get("/links", async (req, res) => {
