@@ -9,15 +9,12 @@ const Links = require("../model/Links");
 const { initQueue, getAllJobsInfo } = require("../helpers/queue");
 
 // Import Socket.IO
-const io = require("socket.io")();
+const { getIoInstance } = require("../helpers/socket");
 
 router.get("/", async (req, res) => {
   try {
     const jobInfo = await getAllJobsInfo();
     res.json(jobInfo);
-
-    // Emit a Socket.IO event when new data is available
-    io.emit("newJob", jobInfo); // Replace 'jobInfo' with the actual data
   } catch (error) {
     console.error("Error getting job info:", error);
     res.status(500).json({ error: "Internal Server Error" });
@@ -47,8 +44,15 @@ router.post("/links", cacheData, async (req, res) => {
       { delay: 5000, attempts: 5, removeOnComplete: true }
     );
 
+    const jobInfo = await getAllJobsInfo();
+    const io = getIoInstance();
+    io.emit("newJob", jobInfo); // Replace 'jobInfo' with the actual data
+
     // Wait for the job to complete and get the result
     const result = await job.finished(); // This waits until the job is finished
+    if (result) {
+      io.emit("newJobFinished", result); // Replace 'jobInfo' with the actual data
+    }
 
     res.json(result);
   } catch (error) {
