@@ -17,14 +17,14 @@ const initQueue = new Queue("initQueue", process.env.REDIS_URL, {
 // Define the job processing function
 initQueue.process(CONCURRENCY, async (job) => {
   const link = job.data.link;
-  console.log(`Processing link:`, link);
+  console.log(`[INFO] Processing link:`, link);
 
   try {
     // Call the init function to process the link
     const object = await init(link);
 
     if (!object || object.status === "failed") {
-      throw new Error("Fail to get file. Try again.");
+      throw new Error("[ERROR][QUEUE] Fail to get file. Try again.");
     } else {
       // Save the result in Redis or perform any other necessary actions
       redisClient.setex(link, 60, JSON.stringify(object));
@@ -41,11 +41,11 @@ initQueue.on('progress', function (job, progress) {
 });
 
 initQueue.on("error", (error) => {
-  console.log(`*** ERROR QUEUE`, error);
+  console.log(`[ERROR][QUEUE]`, error);
 });
 
 initQueue.on('completed', job => {
-  console.log(`[${job.id}] ${job.data.link} COMPLETE JOB`);
+  console.log(`[INFO][${job.id}] ${job.data.link} COMPLETE JOB`);
 })
 
 module.exports = { initQueue };

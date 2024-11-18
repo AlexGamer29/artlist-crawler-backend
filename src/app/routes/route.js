@@ -24,7 +24,7 @@ router.get("/links", async (req, res) => {
 // Define the POST /links route
 router.post("/links", cacheData, async (req, res) => {
   const link = req.body.link;
-  console.log(`Received link:`, link);
+  console.log(`[INFO] Received link:`, link);
 
   if (!link) {
     return res.status(400).json({ error: "Link is not correct." });

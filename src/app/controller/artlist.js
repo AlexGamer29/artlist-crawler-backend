@@ -4,6 +4,7 @@ const { downloadAacFile, getArtistNames } = require("../helpers/helper");
 async function init(link) {
   // Launch a headless browser
   const browser = await puppeteer.launch({
+    executablePath: process.env.CHROME_PATH,
     headless: true,
     args: [
       "--no-sandbox",
@@ -12,23 +13,20 @@ async function init(link) {
       "--disable-accelerated-2d-canvas",
       "--no-first-run",
       "--no-zygote",
-      "--single-process",
+      // "--single-process",
       "--disable-gpu",
-      '--disable-blink-features=AutomationControlled',
+      "--disable-blink-features=AutomationControlled",
       "--window-size=1920,1080",
-      "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
+      "--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
     ],
   });
   let data;
   let files;
-  const mediaFiles = [];
   const page = await browser.newPage();
 
   try {
     // Go to the provided link
     await page.goto(link, { waitUntil: "networkidle0", timeout: 100000 });
-
-    console.log(await page.content());
 
     await page.waitForFunction(() => {
       return window.__next_f !== undefined;
@@ -50,10 +48,14 @@ async function init(link) {
       });
     });
 
-    files = await downloadAacFile(data.songData.sitePlayableFilePath, data.songData.songName, getArtistNames(data.songData.artists));
+    files = await downloadAacFile(
+      data.songData.sitePlayableFilePath,
+      data.songData.songName,
+      getArtistNames(data.songData.artists)
+    );
     await browser.close();
   } catch (error) {
-    console.error("Error clicking the element:", error);
+    console.error("[ERROR] Crawler", error);
     await browser.close();
   }
   return files;
