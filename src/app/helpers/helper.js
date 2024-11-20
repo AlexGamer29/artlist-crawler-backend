@@ -82,6 +82,7 @@ async function downloadAacFile(url, song, artist) {
             {
               song,
               artist,
+              title: artist.concat(" - ", song, ".wav"),
               links: outputWavFile,
               createdAt: new Date(),
             },

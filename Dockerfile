@@ -26,8 +26,16 @@ COPY . /app/
 
 RUN node node_modules/puppeteer/install.js
 
-# Expose any ports your application may need (if any)
-EXPOSE 3027
+# Use ARG for build-time variables
+ARG PORT=3027
+
+# Use ENV for runtime variables
+ENV PORT=$PORT \
+    NODE_ENV=production \
+    CHROME_PATH=/usr/bin/google-chrome
+
+# Expose the port
+EXPOSE $PORT
 
 # Define the command to run your application
 CMD ["node", "index.js"]

@@ -6,6 +6,7 @@ const linksSchema = new Schema({
   song: String,
   artist: String,
   links: String,
+  title: String,
   createdAt: Date,
 });
 
