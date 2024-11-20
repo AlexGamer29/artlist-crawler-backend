@@ -44,10 +44,11 @@ async function init(link) {
           const parsedData = JSON.parse(dataArr);
           let children = parsedData[parsedData.length - 1].children;
           data = children[children.length - 1];
+          data = data[data.length - 1];
         }
       });
     });
-    console.log(data.songData);
+    
     files = await downloadAacFile(
       data.songData.sitePlayableFilePath,
       data.songData.songName,
