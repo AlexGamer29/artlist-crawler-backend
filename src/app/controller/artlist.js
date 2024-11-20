@@ -27,6 +27,8 @@ async function init(link) {
   try {
     // Go to the provided link
     await page.goto(link, { waitUntil: "networkidle0", timeout: 100000 });
+    
+    console.log(await page.content());
 
     await page.waitForFunction(() => {
       return window.__next_f !== undefined;
