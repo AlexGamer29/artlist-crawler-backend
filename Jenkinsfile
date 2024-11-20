@@ -20,7 +20,7 @@ pipeline {
         stage('Setup Environment') {
             steps {
                 script {
-                    // Copy the credential file content to .env
+                    // Copy the credential file content to .env file
                     sh '''
                         cp $ARTLIST_ENV .env
                     '''
