@@ -22,12 +22,13 @@ initQueue.process(CONCURRENCY, async (job) => {
   try {
     // Call the init function to process the link
     const object = await init(link);
-
+    job.progress(50);
     if (!object || object.status === "failed") {
       throw new Error("[ERROR][QUEUE] Fail to get file. Try again.");
     } else {
       // Save the result in Redis or perform any other necessary actions
       redisClient.setex(link, 60, JSON.stringify(object));
+      job.progress(100);
       return object;
     }
   } catch (error) {
@@ -37,7 +38,7 @@ initQueue.process(CONCURRENCY, async (job) => {
 });
 
 initQueue.on('progress', function (job, progress) {
-  console.log(`[${job.id}] ${job.data.link} is ${progress * 100}% ready!`);
+  console.log(`[${job.id}] ${job.data.link} is ${progress}% ready!`);
 });
 
 initQueue.on("error", (error) => {

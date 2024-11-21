@@ -37,10 +37,8 @@ router.post("/links", cacheData, async (req, res) => {
       { delay: 5000, attempts: 5, removeOnComplete: true }
     );
 
-    // Wait for the job to complete and get the result
-    const result = await job.finished(); // This waits until the job is finished
-
-    res.json(result);
+    // Return the job ID immediately
+    res.status(200).json({ jobId: job.id, link: job.data.link });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: "Internal Server Error" });
