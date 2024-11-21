@@ -34,7 +34,20 @@ initQueue.on("completed", (job, result) => {
 });
 
 initQueue.on("progress", (job, progress) => {
-  io.emit(`job`, { status: "progress", id: job.id, progress: progress, job: job.data.link });
+  io.emit(`job`, {
+    status: "progress",
+    id: job.id,
+    progress: progress,
+    job: job.data.link,
+  });
+});
+
+initQueue.on("active", (job, jobPromise) => {
+  io.emit(`job`, {
+    status: "active",
+    id: job.id,
+    link: job.data.link,
+  });
 });
 
 initQueue.on("failed", (job, error) => {
