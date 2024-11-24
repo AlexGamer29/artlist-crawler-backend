@@ -1,55 +1,79 @@
-const express = require("express");
-const bodyParser = require("body-parser");
-const cors = require("cors");
 const mongoose = require("mongoose");
-const socketIO = require("socket.io");
+const config = require("./src/config/config");
+const App = require("./src/app");
 
-require("dotenv").config();
-const app = express();
-const port = process.env.PORT;
+// MongoDB Connection
+async function connectToMongoDB() {
+  try {
+    await mongoose.connect(config.mongodb.url, config.mongodb.options);
+    console.log("MongoDB connected successfully");
+  } catch (err) {
+    console.error("MongoDB connection error:", err);
+    process.exit(1);
+  }
+}
 
-const routes = require("./src/app/routes/route");
+// Graceful shutdown
+function setupGracefulShutdown(server) {
+  const shutdown = async () => {
+    console.log("Received shutdown signal");
 
-app.use(bodyParser.json());
-app.use(cors());
-app.use("/api", routes);
+    // Close server
+    server.close(() => {
+      console.log("HTTP server closed");
+    });
 
-// Starting the server
-const server = app.listen(port, async () => {
-  console.log(`Server started on port ${port}`);
+    // Close database connection
+    try {
+      await mongoose.connection.close();
+      console.log("MongoDB connection closed");
+    } catch (err) {
+      console.error("Error closing MongoDB connection:", err);
+    }
 
-  await mongoose
-    .connect(process.env.MONGODB_URL, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    })
-    .then(() => console.log("MongoDB connected successfully"))
-    .catch((err) => console.log("MongoDB connection error:", err));
-});
+    // Exit process
+    process.exit(0);
+  };
 
-const io = socketIO(server);
-const { initQueue } = require("./src/app/helpers/queue");
-initQueue.on("completed", (job, result) => {
-  io.emit(`job`, { status: "completed", result });
-});
-
-initQueue.on("progress", (job, progress) => {
-  io.emit(`job`, {
-    status: "progress",
-    id: job.id,
-    progress: progress,
-    job: job.data.link,
+  // Handle different signals
+  process.on("SIGTERM", shutdown);
+  process.on("SIGINT", shutdown);
+  process.on("uncaughtException", (err) => {
+    console.error("Uncaught Exception:", err);
+    shutdown();
   });
-});
+}
 
-initQueue.on("active", (job, jobPromise) => {
-  io.emit(`job`, {
-    status: "active",
-    id: job.id,
-    link: job.data.link,
-  });
-});
+// Start server
+async function startServer() {
+  try {
+    // Connect to MongoDB
+    await connectToMongoDB();
 
-initQueue.on("failed", (job, error) => {
-  io.emit(`job`, { status: "failed", error: error.message });
+    // Create Express app instance
+    const application = new App();
+    const app = application.getApp();
+
+    // Start HTTP server
+    const server = app.listen(config.server.port, () => {
+      console.log(`Server is running on port ${config.server.port}`);
+    });
+
+    // Initialize application with server instance
+    await application.initialize(server);
+
+    // Setup graceful shutdown
+    setupGracefulShutdown(server);
+
+    return server;
+  } catch (error) {
+    console.error("Failed to start server:", error);
+    process.exit(1);
+  }
+}
+
+// Start the application
+startServer().catch((error) => {
+  console.error("Application startup failed:", error);
+  process.exit(1);
 });
