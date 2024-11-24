@@ -1,81 +1,193 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const router = express.Router();
+const path = require("path");
+const fs = require("fs");
+const config = require("../config/config");
 
-const { createDownloadableLink } = require("../helpers/helper");
-const { cacheData } = require("../middleware/middleware");
-const Links = require("../model/Links");
-const { initQueue } = require("../helpers/queue");
-
-router.get("/", async (req, res) => {
-  res.json({
-    data: "Hello World!",
+function createRoutes(queueService) {
+  router.get("/", (req, res) => {
+    res.json({
+      status: "success",
+      message: "API is running",
+    });
   });
-});
 
-router.get("/links", async (req, res) => {
-  const allLinks = await Links.find();
-  res.json({
-    data: allLinks,
+  router.get("/links", async (req, res) => {
+    try {
+      const links = await queueService.db.getAllLinks();
+      res.json({
+        status: "success",
+        data: links,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
   });
-});
 
-// Define the POST /links route
-router.post("/links", cacheData, async (req, res) => {
-  const link = req.body.link;
-  console.log(`[INFO] Received link:`, link);
+  router.post("/links", async (req, res) => {
+    const { link } = req.body;
 
-  if (!link) {
-    return res.status(400).json({ error: "Link is not correct." });
-  }
+    if (!link) {
+      return res.status(400).json({
+        status: "error",
+        message: "Link is required",
+      });
+    }
 
-  try {
-    // Add the job to the queue
-    const job = await initQueue.add(
-      { link },
-      { delay: 5000, attempts: 5, removeOnComplete: true }
+    try {
+      const job = await queueService.addJob(link);
+      res.status(200).json({
+        status: "success",
+        jobId: job.id,
+        link: job.data.link,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
+
+  router.get("/download", (req, res) => {
+    const { filename } = req.query;
+
+    if (!filename) {
+      return res.status(400).json({
+        status: "error",
+        message: "Filename is required",
+      });
+    }
+
+    const filePath = path.join(
+      __dirname,
+      "..",
+      "..",
+      config.file.exportPath,
+      filename
     );
 
-    // Return the job ID immediately
-    res.status(200).json({ jobId: job.id, link: job.data.link });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: "Internal Server Error" });
-  }
-});
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({
+        status: "error",
+        message: "File not found",
+      });
+    }
 
-router.get("/download", (req, res) => {
-  const fileName = req.query.filename;
+    res.setHeader("Content-Disposition", `attachment; filename=${filename}`);
+    fs.createReadStream(filePath).pipe(res);
+  });
 
-  if (!fileName) {
-    return res.status(400).send({
-      error: "Please provide a valid filename in the query parameters.",
+  // Serve static files from exports directory
+  const exportsPath = path.join(__dirname, "..", "..", config.file.exportPath);
+  router.use("/exports", express.static(exportsPath));
+
+  // Error handling middleware
+  router.use((err, req, res, next) => {
+    console.error(err);
+    res.status(500).json({
+      status: "error",
+      message: err.message || "Internal server error",
     });
-  }
+  });
 
-  const filePath = createDownloadableLink(fileName);
+  router.get("/queue/status", async (req, res) => {
+    try {
+      const status = await queueService.getQueueStatus();
+      res.json({
+        status: "success",
+        data: status,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
-  // Check if the file exists
-  if (fs.existsSync(filePath)) {
-    // Set the Content-Disposition header to suggest the filename when downloading
-    res.setHeader("Content-Disposition", `attachment; filename=${fileName}`);
+  router.post("/queue/clean", async (req, res) => {
+    try {
+      await queueService.cleanQueue();
+      res.json({
+        status: "success",
+        message: "Queue cleaned successfully",
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
-    // Stream the file to the response
-    const fileStream = fs.createReadStream(filePath);
-    fileStream.pipe(res);
-  } else {
-    res.status(404).json({ error: "File not found" });
-  }
-});
+  router.get("/queue/detailed-status", async (req, res) => {
+    try {
+      const status = await queueService.getDetailedQueueStatus();
+      res.json({
+        status: "success",
+        data: status,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
-// Serve files from the 'exports' directory
-const exportsPath = path.join(__dirname, "..", "..", "..", "exports");
-router.use("/exports", express.static(exportsPath));
+  router.post("/queue/pause", async (req, res) => {
+    try {
+      const result = await queueService.pauseQueue();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
-// Error handling middleware
-router.use((err, req, res, next) => {
-  res.status(500).send("An error occurred: " + err.message);
-});
+  router.post("/queue/resume", async (req, res) => {
+    try {
+      const result = await queueService.resumeQueue();
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
-module.exports = router;
+  router.delete("/queue/job/:jobId", async (req, res) => {
+    try {
+      const result = await queueService.removeJob(req.params.jobId);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
+
+  router.post("/queue/job/:jobId/retry", async (req, res) => {
+    try {
+      const result = await queueService.retryJob(req.params.jobId);
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
+
+  return router;
+}
+
+module.exports = createRoutes;
