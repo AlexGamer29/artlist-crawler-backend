@@ -48,7 +48,6 @@ async function downloadAacFile(url, song, artist) {
         __dirname,
         "..",
         "..",
-        "..",
         exportFolder
       ); // Move up one level to the parent directory
 

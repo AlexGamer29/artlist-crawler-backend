@@ -4,7 +4,7 @@ const path = require("path");
 const router = express.Router();
 
 const { createDownloadableLink } = require("../helpers/helper");
-const { cacheData } = require("../../app/middleware/middleware");
+const { cacheData } = require("../middleware/middleware");
 const Links = require("../model/Links");
 const { initQueue } = require("../helpers/queue");
 

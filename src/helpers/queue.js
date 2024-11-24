@@ -1,7 +1,7 @@
 const Queue = require("bull");
 
 const { redisClient } = require("../middleware/middleware");
-const { init } = require("../../app/controller/artlist");
+const { init } = require("../controller/artlist");
 const CONCURRENCY = 1;
 
 // Create a new Bull queue for processing init jobs

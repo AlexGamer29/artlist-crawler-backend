@@ -4,7 +4,7 @@ const { downloadAacFile, getArtistNames } = require("../helpers/helper");
 async function init(link) {
   // Launch a headless browser
   const browser = await puppeteer.launch({
-    executablePath: process.env.CHROME_PATH,
+    // executablePath: process.env.CHROME_PATH,
     headless: true,
     args: [
       "--no-sandbox",

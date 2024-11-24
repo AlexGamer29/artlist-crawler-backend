@@ -8,7 +8,7 @@ require("dotenv").config();
 const app = express();
 const port = process.env.PORT;
 
-const routes = require("./src/app/routes/route");
+const routes = require("./src/routes/route");
 
 app.use(bodyParser.json());
 app.use(cors());
@@ -28,7 +28,7 @@ const server = app.listen(port, async () => {
 });
 
 const io = socketIO(server);
-const { initQueue } = require("./src/app/helpers/queue");
+const { initQueue } = require("./src/helpers/queue");
 initQueue.on("completed", (job, result) => {
   io.emit(`job`, { status: "completed", result });
 });
