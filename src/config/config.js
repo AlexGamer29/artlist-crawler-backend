@@ -20,6 +20,9 @@ module.exports = {
   },
   puppeteer: {
     launch: {
+      ...(process.env.CHROME_PATH && {
+        executablePath: process.env.CHROME_PATH,
+      }),
       headless: true,
       args: [
         "--no-sandbox",
