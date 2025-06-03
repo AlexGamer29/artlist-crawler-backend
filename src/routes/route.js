@@ -11,6 +11,24 @@ function createRoutes(queueService) {
       message: "API is running",
     });
   });
+  
+  router.get("/link", async (req, res) => {
+    try {
+      const link = await queueService.db.findOneLink({
+          link: req?.query?.link
+      })
+
+      res.json({
+        status: "success",
+        data: link,
+      });
+    } catch (error) {
+      res.status(500).json({
+        status: "error",
+        message: error.message,
+      });
+    }
+  });
 
   router.get("/links", async (req, res) => {
     try {

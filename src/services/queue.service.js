@@ -73,10 +73,12 @@ class QueueService {
 
         // Save to database
         const result = await this.db.saveLink({
+          jobId: job.id,
           song: songData.songName,
           artist: artistName,
           title: wavFilename,
-          links: wavPath,
+          link: link,
+          storagePath: wavPath,
           createdAt: new Date(),
         });
 

@@ -1,7 +1,7 @@
 const Links = require("../model/Links");
 
 class DbService {
-  async saveLink({ song, artist, title, links, createdAt }) {
+  async saveLink({ jobId, song, artist, title, link, storagePath, createdAt }) {
     try {
       const options = {
         upsert: true,
@@ -12,10 +12,12 @@ class DbService {
       const result = await Links.findOneAndUpdate(
         { song, artist },
         {
+          jobId,
           song,
           artist,
           title,
-          links,
+          link,
+          storagePath,
           createdAt,
         },
         options
@@ -44,6 +46,16 @@ class DbService {
   async findLinkById(id) {
     try {
       const link = await Links.findById(id);
+      return link;
+    } catch (error) {
+      console.error("Database fetch error:", error);
+      throw new Error(`Failed to fetch link: ${error.message}`);
+    }
+  }
+  
+  async findOneLink(query = {}) {
+    try {
+      const link = await Links.find(query);
       return link;
     } catch (error) {
       console.error("Database fetch error:", error);
