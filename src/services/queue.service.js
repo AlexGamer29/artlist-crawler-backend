@@ -151,7 +151,7 @@ class QueueService {
 
     this.queue.on("completed", async (job, result) => {
       const webhook = await this.callWebhookSimple(
-        config.webhook.url,,
+        config.webhook.url,
         result,
         config.webhook.username,
         config.webhook.password,
