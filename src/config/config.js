@@ -1,6 +1,11 @@
 require("dotenv").config();
 
 module.exports = {
+  webhook: {
+    url: process.env.WEBHOOK_URL,
+    username: process.env.WEBHOOK_USER,
+    password: process.env.WEBHOOK_PASS
+  },
   server: {
     port: process.env.PORT,
   },

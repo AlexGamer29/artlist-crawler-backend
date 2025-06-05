@@ -1,4 +1,5 @@
 // src/services/queue.service.js
+const axios = require('axios');
 const Bull = require("bull");
 const path = require("path");
 const config = require("../config/config");
@@ -27,6 +28,90 @@ class QueueService {
 
     this.setupQueue();
     this.setupQueueEvents();
+  }
+
+  // Enhanced function with retry logic and different parameter types
+  async callWebhookAdvanced(options) {
+    const {
+      url,
+      params = {},
+      username,
+      password,
+      method = 'POST',
+      paramType = 'body', // 'body', 'query', 'form'
+      retries = 3,
+      retryDelay = 1000,
+      timeout = 30000,
+      headers = {}
+    } = options;
+
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        let requestUrl = url;
+        let requestBody = null;
+        let contentType = 'application/json';
+
+        // Handle different parameter types
+        switch (paramType) {
+          case 'query':
+            const urlObj = new URL(url);
+            Object.keys(params).forEach(key => {
+              urlObj.searchParams.append(key, params[key]);
+            });
+            requestUrl = urlObj.toString();
+            break;
+            
+          case 'form':
+            requestBody = new URLSearchParams(params).toString();
+            contentType = 'application/x-www-form-urlencoded';
+            break;
+            
+          case 'body':
+          default:
+            requestBody = JSON.stringify(params);
+            contentType = 'application/json';
+            break;
+        }
+
+        const auth = Buffer.from(`${username}:${password}`).toString('base64');
+        
+        const response = await fetch(requestUrl, {
+          method: method.toUpperCase(),
+          headers: {
+            'Content-Type': contentType,
+            'Authorization': `Basic ${auth}`,
+            'User-Agent': 'Node.js Webhook Client',
+            ...headers
+          },
+          body: requestBody
+        });
+
+        const responseData = await response.text();
+        
+        if (response.ok) {
+          return {
+            success: true,
+            statusCode: response.status,
+            statusMessage: response.statusText,
+            headers: Object.fromEntries(response.headers),
+            body: responseData,
+            attempt: attempt + 1
+          };
+        } else {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+      } catch (error) {
+        console.error(`Attempt ${attempt + 1} failed:`, error.message);
+        
+        if (attempt === retries) {
+          throw new Error(`Webhook failed after ${retries + 1} attempts: ${error.message}`);
+        }
+        
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
+      }
+    }
   }
 
   setupQueue() {
@@ -113,7 +198,16 @@ class QueueService {
     });
 
     this.queue.on("completed", (job, result) => {
-      console.log(`Job ${job.id} has completed`);
+      const webhook = await this.callWebhookAdvanced({
+        url: config.webhook.url,
+        params: { link: result.link},
+        username: config.webhook.username,
+        password: config.webhook.password,
+        paramType: 'body',
+        retries: 3,
+        timeout: 30000
+      });
+      console.log(`Job ${job.id} ${webhook} has completed`);
     });
 
     this.queue.on("failed", (job, error) => {
