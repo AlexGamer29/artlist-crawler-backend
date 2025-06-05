@@ -197,7 +197,7 @@ class QueueService {
       console.log(`Job ${job.id} has stalled`);
     });
 
-    this.queue.on("completed", (job, result) => {
+    this.queue.on("completed", async (job, result) => {
       const webhook = await this.callWebhookAdvanced({
         url: config.webhook.url,
         params: { link: result.link},
