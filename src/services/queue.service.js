@@ -30,7 +30,7 @@ class QueueService {
     this.setupQueueEvents();
   }
 
-  async function callWebhookSimple(url, params, username, password, options = {}) {
+  async callWebhookSimple(url, params, username, password, options = {}) {
     try {
       const response = await axios({
         method: options.method || 'POST',
