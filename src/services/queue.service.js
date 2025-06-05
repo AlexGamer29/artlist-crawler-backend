@@ -30,86 +30,38 @@ class QueueService {
     this.setupQueueEvents();
   }
 
-  // Enhanced function with retry logic and different parameter types
-  async callWebhookAdvanced(options) {
-    const {
-      url,
-      params = {},
-      username,
-      password,
-      method = 'POST',
-      paramType = 'body', // 'body', 'query', 'form'
-      retries = 3,
-      retryDelay = 1000,
-      timeout = 30000,
-      headers = {}
-    } = options;
-
-    for (let attempt = 0; attempt <= retries; attempt++) {
-      try {
-        let requestUrl = url;
-        let requestBody = null;
-        let contentType = 'application/json';
-
-        // Handle different parameter types
-        switch (paramType) {
-          case 'query':
-            const urlObj = new URL(url);
-            Object.keys(params).forEach(key => {
-              urlObj.searchParams.append(key, params[key]);
-            });
-            requestUrl = urlObj.toString();
-            break;
-            
-          case 'form':
-            requestBody = new URLSearchParams(params).toString();
-            contentType = 'application/x-www-form-urlencoded';
-            break;
-            
-          case 'body':
-          default:
-            requestBody = JSON.stringify(params);
-            contentType = 'application/json';
-            break;
+  async function callWebhookSimple(url, params, username, password, options = {}) {
+    try {
+      const response = await axios({
+        method: options.method || 'POST',
+        url: url,
+        data: params,
+        auth: {
+          username: username,
+          password: password
+        },
+        timeout: options.timeout || 30000,
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Node.js Webhook Client',
+          ...options.headers
         }
+      });
 
-        const auth = Buffer.from(`${username}:${password}`).toString('base64');
-        
-        const response = await fetch(requestUrl, {
-          method: method.toUpperCase(),
-          headers: {
-            'Content-Type': contentType,
-            'Authorization': `Basic ${auth}`,
-            'User-Agent': 'Node.js Webhook Client',
-            ...headers
-          },
-          body: requestBody
-        });
-
-        const responseData = await response.text();
-        
-        if (response.ok) {
-          return {
-            success: true,
-            statusCode: response.status,
-            statusMessage: response.statusText,
-            headers: Object.fromEntries(response.headers),
-            body: responseData,
-            attempt: attempt + 1
-          };
-        } else {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-      } catch (error) {
-        console.error(`Attempt ${attempt + 1} failed:`, error.message);
-        
-        if (attempt === retries) {
-          throw new Error(`Webhook failed after ${retries + 1} attempts: ${error.message}`);
-        }
-        
-        // Wait before retry
-        await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
+      return {
+        success: true,
+        statusCode: response.status,
+        statusMessage: response.statusText,
+        headers: response.headers,
+        body: response.data
+      };
+    } catch (error) {
+      if (error.response) {
+        throw new Error(`HTTP ${error.response.status}: ${error.response.statusText}`);
+      } else if (error.request) {
+        throw new Error('No response received from server');
+      } else {
+        throw new Error(`Request error: ${error.message}`);
       }
     }
   }
@@ -198,15 +150,13 @@ class QueueService {
     });
 
     this.queue.on("completed", async (job, result) => {
-      const webhook = await this.callWebhookAdvanced({
-        url: config.webhook.url,
-        params: { link: result.link},
-        username: config.webhook.username,
-        password: config.webhook.password,
-        paramType: 'body',
-        retries: 3,
-        timeout: 30000
-      });
+      const webhook = await this.callWebhookSimple(
+        config.webhook.url,,
+        result,
+        config.webhook.username,
+        config.webhook.password,
+        { debug: true }
+      );
       console.log(`Job ${job.id} ${webhook} has completed`);
     });
 
